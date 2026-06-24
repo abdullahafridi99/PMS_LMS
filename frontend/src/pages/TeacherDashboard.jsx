@@ -14,7 +14,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { api } from '../utils/api';
+import { api, API_BASE_URL } from '../utils/api';
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ export default function TeacherDashboard() {
     try {
       // 1. Fetch own logs
       const token = localStorage.getItem('token');
-      const attRes = await fetch('http://localhost:5000/api/attendance/teacher/my-logs', {
+      const attRes = await fetch(`${API_BASE_URL}/attendance/teacher/my-logs`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

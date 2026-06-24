@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GraduationCap, Lock, Mail, ArrowLeft, Loader2, Eye, EyeOff, User, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { api } from '../utils/api';
+import { api, API_BASE_URL } from '../utils/api';
 
 export default function TeacherSignup() {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ export default function TeacherSignup() {
 
     try {
       // Call the new teacher signup route
-      const res = await fetch('http://localhost:5000/api/auth/signup/teacher', {
+      const res = await fetch(`${API_BASE_URL}/auth/signup/teacher`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
