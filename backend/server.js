@@ -173,17 +173,42 @@ const server = http.createServer(app);
 // Initialize Sockets
 initializeSocket(server);
 
-// Start Server
-const startServer = async () => {
-  // Initialize MongoDB connection or JSON fallback
-  await dbService.initialize();
+// Middleware to ensure DB connection and seeding (critical for serverless environments)
+let isInitialized = false;
+app.use(async (req, res, next) => {
+  if (!isInitialized) {
+    try {
+      await dbService.initialize();
+      await seedDatabase();
+      isInitialized = true;
+    } catch (err) {
+      console.error("DB Initialization error:", err);
+    }
+  }
+  next();
+});
 
-  // Run seed script
-  await seedDatabase();
-
-  server.listen(PORT, () => {
-    console.log(`🚀 Pakhtunkhwa Model School server running on port ${PORT}...`);
+// Start Server locally if not running on Vercel
+if (!process.env.VERCEL) {
+  const startServer = async () => {
+    await dbService.initialize();
+    await seedDatabase();
+    isInitialized = true;
+    server.listen(PORT, () => {
+      console.log(`🚀 Pakhtunkhwa Model School server running on port ${PORT}...`);
+    });
+  };
+  startServer();
+} else {
+  // Pre-initialize for faster serverless response times
+  dbService.initialize().then(() => {
+    seedDatabase().then(() => {
+      isInitialized = true;
+      console.log("⚡ Serverless DB & Seeding pre-configured.");
+    });
   });
-};
+}
 
-startServer();
+// Export app for serverless Vercel deployment
+module.exports = app;
+
