@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   BookOpen, 
@@ -14,9 +14,12 @@ import {
   Calendar,
   Layers,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Building2,
+  GraduationCap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { api } from '../utils/api';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -29,6 +32,29 @@ export default function LandingPage() {
     address: ''
   });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [settings, setSettings] = useState({
+    schoolBuildingUrl: '',
+    principalMessage: 'Welcome to Pakhtunkhwa Model School. Our mission is to provide high-quality education and build strong character in our students.',
+    principalName: 'Principal Tariq Zaman',
+    principalUrl: '',
+    staffList: []
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const data = await api.settings.get();
+        if (data) {
+          setSettings(data);
+        }
+      } catch (err) {
+        console.error('Failed to load school settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleInputChange = (e) => {
     setAdmissionForm({
@@ -37,18 +63,36 @@ export default function LandingPage() {
     });
   };
 
-  const handleAdmissionSubmit = (e) => {
+  const handleAdmissionSubmit = async (e) => {
     e.preventDefault();
-    // Simulate admission inquiry request
-    setShowSuccessModal(true);
-    setAdmissionForm({
-      studentName: '',
-      grade: 'Grade 9',
-      parentName: '',
-      phone: '',
-      email: '',
-      address: ''
-    });
+    setFormError('');
+
+    // Phone validation
+    const cleanPhone = admissionForm.phone.trim().replace(/[-\s]/g, '');
+    const phoneRegex = /^((\+92)|(0092)|(92))?3\d{9}$|^03\d{9}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      setFormError('Invalid phone number format. Must be a valid Pakistani mobile number (e.g., 03001234567 or +923001234567).');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await api.inquiries.create(admissionForm);
+      setShowSuccessModal(true);
+      setAdmissionForm({
+        studentName: '',
+        grade: 'Grade 9',
+        parentName: '',
+        phone: '',
+        email: '',
+        address: ''
+      });
+    } catch (err) {
+      console.error(err);
+      setFormError(err.message || 'Failed to submit admission inquiry. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -206,6 +250,124 @@ export default function LandingPage() {
         </div>
       </header>
 
+      {/* PRINCIPAL MESSAGE SECTION */}
+      <section className="py-20 bg-slate-100 dark:bg-slateCustom-950 transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-12 gap-12 items-center text-left">
+          {/* Principal Image */}
+          <div className="md:col-span-5 flex justify-center">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="relative w-full max-w-[320px] aspect-[4/5] rounded-[36px] bg-gradient-brand shadow-2xl overflow-hidden group border border-slate-200 dark:border-slateCustom-800"
+            >
+              {settings.principalUrl ? (
+                <img 
+                  src={settings.principalUrl} 
+                  alt={settings.principalName} 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-brand-600 to-brand-800 text-white p-8 space-y-4">
+                  <GraduationCap className="w-20 h-20 text-brand-200 opacity-80" />
+                  <span className="font-outfit font-black text-lg text-center tracking-wider">{settings.principalName}</span>
+                  <span className="text-xs text-brand-200 font-semibold tracking-widest uppercase">Principal Portfolio</span>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent flex flex-col justify-end p-6 text-white">
+                <span className="font-outfit font-bold text-lg">{settings.principalName}</span>
+                <span className="text-xs text-brand-350 font-semibold tracking-wider uppercase">Principal, PMS Zangali</span>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Principal Message Content */}
+          <div className="md:col-span-7 space-y-6">
+            <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest block">Message from the Principal</span>
+            <h2 className="font-outfit font-black text-3xl sm:text-4xl text-slate-900 dark:text-white leading-tight uppercase">
+              Academic Excellence & Moral Foundations
+            </h2>
+            <div className="relative">
+              <span className="absolute top-[-30px] left-[-10px] text-8xl font-serif text-brand-500/10 pointer-events-none">“</span>
+              <p className="text-base text-slate-600 dark:text-slate-350 leading-relaxed font-normal italic relative z-10">
+                {settings.principalMessage}
+              </p>
+            </div>
+            
+            <div className="pt-4 border-t border-slate-200 dark:border-slateCustom-800 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-950/65 flex items-center justify-center">
+                <Award className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+              </div>
+              <div>
+                <span className="font-bold text-sm text-slate-800 dark:text-white block">{settings.principalName}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Head of Institution • Pakhtunkhwa Model School</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CAMPUS & FACILITIES SECTION */}
+      <section className="py-20 bg-white dark:bg-slateCustom-900 transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-12 gap-12 items-center text-left">
+          {/* Campus Details */}
+          <div className="md:col-span-7 space-y-6">
+            <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest block">Campus & Facilities</span>
+            <h2 className="font-outfit font-black text-3xl sm:text-4xl text-slate-900 dark:text-white leading-tight uppercase">
+              Modern Campus Infrastructure
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+              Our Zangali Branch campus provides double-secured, modern academic spaces designed to promote logical reasoning and safety. From physics experiments to high-speed computer labs, our facilities offer perfect foundations for boarding matric certifications.
+            </p>
+            
+            <div className="grid grid-cols-2 gap-6 pt-2">
+              <div className="space-y-2">
+                <strong className="text-slate-800 dark:text-white font-bold block text-sm">🔬 Science Laboratories</strong>
+                <span className="text-xs text-slate-400">Fully equipped physics and chemistry labs for practical curriculum testing.</span>
+              </div>
+              <div className="space-y-2">
+                <strong className="text-slate-800 dark:text-white font-bold block text-sm">💻 Computer Console</strong>
+                <span className="text-xs text-slate-400">Modern computing center to introduce basic coding and software tools.</span>
+              </div>
+              <div className="space-y-2">
+                <strong className="text-slate-800 dark:text-white font-bold block text-sm">📚 Library Library</strong>
+                <span className="text-xs text-slate-400">A peaceful hall holding 5,000 reference materials and curriculum logs.</span>
+              </div>
+              <div className="space-y-2">
+                <strong className="text-slate-800 dark:text-white font-bold block text-sm">⚽ Playground</strong>
+                <span className="text-xs text-slate-400">Spacious fields for cricket, football, running, and athletic gala preparation.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Building Photo */}
+          <div className="md:col-span-5 flex justify-center">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="relative w-full max-w-[400px] aspect-[4/3] rounded-[36px] bg-slate-100 dark:bg-slateCustom-950 shadow-2xl overflow-hidden group border border-slate-200 dark:border-slateCustom-800"
+            >
+              {settings.schoolBuildingUrl ? (
+                <img 
+                  src={settings.schoolBuildingUrl} 
+                  alt="School Campus Facade" 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white p-8 space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-brand-500/20 border-2 border-brand-500 flex items-center justify-center">
+                    <Building2 className="w-8 h-8 text-brand-450" />
+                  </div>
+                  <span className="font-outfit font-black text-sm text-center tracking-wider">Zangali Campus Facade</span>
+                  <span className="text-[10px] text-slate-450 text-center font-medium max-w-xs">Campus picture is configurable by the administrator panel</span>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* PORTALS ACCESS GRID */}
       <section id="features" className="py-20 bg-white dark:bg-slateCustom-900 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-6">
@@ -297,6 +459,70 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* STAFF / FACULTY SECTION */}
+      <section className="py-20 bg-slate-100 dark:bg-slateCustom-950 transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center space-y-4 max-w-2xl mx-auto mb-16 text-left sm:text-center">
+            <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest block">Educators & Instructors</span>
+            <h2 className="font-outfit font-black text-3xl sm:text-4xl text-slate-900 dark:text-white tracking-tight uppercase">
+              Meet Our Faculty
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
+              Highly certified teachers who lead our students towards academic milestones and positive character values.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {settings.staffList && settings.staffList.length > 0 ? (
+              settings.staffList.map((staff, idx) => (
+                <motion.div 
+                  key={idx}
+                  whileHover={{ y: -5 }}
+                  className="bg-white dark:bg-slateCustom-900 border border-slate-200/50 dark:border-slateCustom-800 rounded-3xl p-6 shadow-md text-left flex flex-col justify-between"
+                >
+                  <div className="space-y-4">
+                    {/* Staff Photo */}
+                    <div className="w-20 h-20 rounded-2xl bg-brand-50 dark:bg-brand-950/40 border border-slate-100 dark:border-slateCustom-850 overflow-hidden flex items-center justify-center shrink-0">
+                      {staff.url ? (
+                        <img src={staff.url} alt={staff.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="font-outfit font-black text-xl text-brand-600 dark:text-brand-400">
+                          {staff.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-outfit font-bold text-lg text-slate-800 dark:text-white">{staff.name}</h4>
+                      <span className="text-xs font-semibold text-brand-600 dark:text-brand-400 uppercase tracking-wider block mt-0.5">{staff.title}</span>
+                    </div>
+
+                    <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed font-normal">
+                      {staff.bio || 'Dedicated educator shaping young minds.'}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 dark:border-slateCustom-800/80 mt-6 space-y-2 text-[10px] text-slate-400">
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>{staff.email || 'contact@pms.edu'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>{staff.phone || '+92 333 1234567'}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <div className="col-span-full py-12 text-center text-slate-400 font-medium bg-white dark:bg-slateCustom-900 border border-slate-200 dark:border-slateCustom-800 rounded-3xl">
+                No faculty members registered. Administrative settings panel can register staff profiles dynamically.
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* ADMISSION INQUIRY FORM */}
       <section id="admissions" className="py-20 bg-slate-100 dark:bg-slateCustom-950 relative overflow-hidden transition-colors duration-300">
         <div className="absolute top-1/4 right-0 w-[400px] h-[400px] bg-brand-500/5 rounded-full blur-[100px] pointer-events-none" />
@@ -332,6 +558,11 @@ export default function LandingPage() {
             <h3 className="font-outfit font-bold text-2xl text-slate-800 dark:text-white mb-6">Admission Inquiry Form</h3>
             
             <form onSubmit={handleAdmissionSubmit} className="space-y-5">
+              {formError && (
+                <div className="p-3.5 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/60 rounded-xl text-rose-600 dark:text-rose-400 text-xs font-semibold text-left">
+                  {formError}
+                </div>
+              )}
               <div className="grid sm:grid-cols-2 gap-5">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Student Full Name *</label>
@@ -354,6 +585,9 @@ export default function LandingPage() {
                     className="w-full h-12 px-4 rounded-xl border border-slate-200 dark:border-slateCustom-800 bg-slate-50 dark:bg-slateCustom-950 text-slate-800 dark:text-white text-sm outline-none focus:border-brand-500 transition-colors"
                   >
                     <option value="Grade 1">Grade 1</option>
+                    <option value="Grade 2">Grade 2</option>
+                    <option value="Grade 3">Grade 3</option>
+                    <option value="Grade 4">Grade 4</option>
                     <option value="Grade 5">Grade 5</option>
                     <option value="Grade 6">Grade 6</option>
                     <option value="Grade 7">Grade 7</option>
@@ -417,10 +651,11 @@ export default function LandingPage() {
 
               <button 
                 type="submit"
-                className="w-full h-13 bg-gradient-brand text-white font-semibold rounded-xl shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 pt-1"
+                disabled={submitting}
+                className="w-full h-12 bg-gradient-brand shadow-brand-500/20 hover:shadow-brand-500/30 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 hover:scale-[1.01] transition-all pt-1 uppercase tracking-wider disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Submit Registration Inquiry
-                <ArrowRight className="w-5 h-5" />
+                {submitting ? 'Submitting Inquiry...' : 'Submit Admission Inquiry'}
+                <ArrowRight className="w-4 h-4" />
               </button>
             </form>
           </div>

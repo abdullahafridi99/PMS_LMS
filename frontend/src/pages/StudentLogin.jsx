@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserCheck, Lock, ArrowLeft, Loader2, Eye, EyeOff, Sparkles, Hash } from 'lucide-react';
+import { UserCheck, Lock, ArrowLeft, Loader2, Eye, EyeOff, Hash } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { api } from '../utils/api';
+import { useAuthStore } from '../store/authStore';
 
 export default function StudentLogin() {
   const navigate = useNavigate();
+  const loginFn = useAuthStore((state) => state.login);
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -18,7 +19,7 @@ export default function StudentLogin() {
     setErrorMessage('');
 
     try {
-      await api.auth.login(studentId, password, 'student');
+      await loginFn(studentId, password, 'student');
       navigate('/student');
     } catch (err) {
       console.error(err);
@@ -72,7 +73,7 @@ export default function StudentLogin() {
                   required
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
-                  placeholder="e.g. PMS-STU-91"
+                  placeholder="e.g. PMS-2026-0042"
                   className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200 dark:border-slateCustom-800 bg-slate-50 dark:bg-slateCustom-950 text-slate-800 dark:text-white text-sm outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all"
                 />
               </div>
@@ -130,21 +131,11 @@ export default function StudentLogin() {
               )}
             </button>
           </form>
-
-          <div className="mt-6 text-center text-xs text-slate-400">
-            <span>Don't have an ID? </span>
-            <button 
-              onClick={() => navigate('/student-signup')}
-              className="font-bold text-cyan-600 hover:text-cyan-500 transition-colors"
-            >
-              Self-Register here
-            </button>
-          </div>
         </motion.div>
       </main>
 
       <footer className="h-16 flex items-center justify-center text-xs text-slate-400 z-10 px-6 text-center">
-        <span>© {new Date().getFullYear()} Pakhtunkhwa Model School. Secure Student Authentication.</span>
+        <span>© {new Date().getFullYear()} Pakhtunkhwa Model School. Student Portal Gateway.</span>
       </footer>
     </div>
   );

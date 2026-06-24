@@ -16,11 +16,17 @@ import {
   CreditCard,
   CheckCircle,
   X,
-  Loader2
+  Loader2,
+  QrCode,
+  BookOpen,
+  Video
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { api } from '../utils/api';
+
+import StudentHomework from './Student/Homework';
+import StudentLMSPortal from './Student/LMSPortal';
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
@@ -231,6 +237,26 @@ export default function StudentDashboard() {
               <Megaphone className="w-4.5 h-4.5" />
               Notice Feed
             </button>
+
+            <button 
+              onClick={() => setActiveTab('homework')}
+              className={`w-full h-11 px-4 rounded-xl font-semibold text-sm flex items-center gap-3 transition-colors ${
+                activeTab === 'homework' ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : 'hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <BookOpen className="w-4.5 h-4.5" />
+              My Homework
+            </button>
+
+            <button 
+              onClick={() => setActiveTab('lms')}
+              className={`w-full h-11 px-4 rounded-xl font-semibold text-sm flex items-center gap-3 transition-colors ${
+                activeTab === 'lms' ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : 'hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Video className="w-4.5 h-4.5" />
+              LMS Portal
+            </button>
           </div>
         </div>
 
@@ -264,6 +290,9 @@ export default function StudentDashboard() {
               {activeTab === 'attendance' && 'Daily Attendance Summary'}
               {activeTab === 'grades' && 'Subject Report Card'}
               {activeTab === 'notices' && 'Official Notice Board'}
+              {activeTab === 'fees' && 'Fees & Payments Ledger'}
+              {activeTab === 'homework' && 'Active Homework Tasks'}
+              {activeTab === 'lms' && 'LMS Curriculum'}
             </h1>
             <p className="text-sm text-slate-400 mt-1">
               Welcome back, {studentUser ? studentUser.name.split(' ')[0] : 'Student'}!
@@ -415,6 +444,51 @@ export default function StudentDashboard() {
                       </div>
                     ) : (
                       <p className="text-xs text-slate-400 font-medium">No announcements published.</p>
+                    )}
+                  </div>
+
+                  {/* Attendance QR Code Check-in Widget */}
+                  <div className="bg-white dark:bg-slateCustom-900 border border-slate-200/50 dark:border-slateCustom-800 rounded-3xl p-6 shadow-sm flex flex-col items-center justify-center text-center space-y-4 relative overflow-hidden">
+                    <style>{`
+                      @keyframes scanEffect {
+                        0% { top: 0%; }
+                        50% { top: 100%; }
+                        100% { top: 0%; }
+                      }
+                      .animate-scan-line {
+                        animation: scanEffect 3s infinite ease-in-out;
+                      }
+                    `}</style>
+                    
+                    <div className="flex items-center gap-2 w-full text-left">
+                      <QrCode className="w-5 h-5 text-cyan-500" />
+                      <h4 className="font-outfit font-bold text-base text-slate-800 dark:text-white">Daily QR Check-in</h4>
+                    </div>
+
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Present this QR Code to the school entrance scanner to mark your daily attendance.
+                    </p>
+
+                    {studentUser && (
+                      <div className="p-3 bg-slate-50 dark:bg-slateCustom-950 border border-slate-200/40 dark:border-slateCustom-850 rounded-2xl relative overflow-hidden group">
+                        {/* Scanning scanner line simulation */}
+                        <div className="absolute left-0 w-full h-[2px] bg-cyan-400/80 animate-scan-line shadow-[0_0_8px_#22d3ee]" />
+                        
+                        <img 
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(studentUser.studentId || studentUser.rollNumber || '')}`} 
+                          alt="Student QR Code Check-in" 
+                          className="w-40 h-40 dark:invert-[0.9] dark:hue-rotate-180" 
+                        />
+                      </div>
+                    )}
+
+                    {studentUser && (
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 block uppercase">Student Identifier</span>
+                        <code className="text-xs font-semibold px-3 py-1 bg-slate-100 dark:bg-slateCustom-950 text-slate-700 dark:text-cyan-400 rounded-lg select-all border border-slate-200/30">
+                          {studentUser.studentId || studentUser.rollNumber}
+                        </code>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -644,6 +718,9 @@ export default function StudentDashboard() {
                 </div>
               </div>
             )}
+
+            {activeTab === 'homework' && <StudentHomework />}
+            {activeTab === 'lms' && <StudentLMSPortal />}
 
           </div>
         )}

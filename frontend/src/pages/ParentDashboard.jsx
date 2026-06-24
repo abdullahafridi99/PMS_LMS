@@ -21,9 +21,11 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { api } from '../utils/api';
+import { useAuthStore } from '../store/authStore';
 
 export default function ParentDashboard() {
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
   const [parentUser, setParentUser] = useState(null);
   
   // Children Details
@@ -63,14 +65,13 @@ export default function ParentDashboard() {
   const [showChallan, setShowChallan] = useState(false);
 
   useEffect(() => {
-    const user = api.auth.getCurrentUser();
     if (!user || user.role !== 'parent') {
       navigate('/login');
       return;
     }
     setParentUser(user);
     loadParentDashboardDetails(user);
-  }, []);
+  }, [user]);
 
   const loadParentDashboardDetails = async (parent) => {
     setGlobalLoading(true);
@@ -128,7 +129,7 @@ export default function ParentDashboard() {
   };
 
   const handleLogout = () => {
-    api.auth.logout();
+    logout();
     navigate('/');
   };
 

@@ -56,6 +56,11 @@ router.post('/', verifyToken, isAdmin, async (req, res) => {
       date: new Date().toISOString()
     });
 
+    // Trigger parent SMS notifications if targeted to parents or everyone
+    if (newNotice.targetAudience === 'all' || newNotice.targetAudience === 'parents') {
+      triggerNoticeSmsBroadcast(newNotice.title, newNotice.content);
+    }
+
     res.status(201).json(newNotice);
   } catch (err) {
     console.error('Error creating notice:', err);
@@ -78,5 +83,27 @@ router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// Helper to broadcast SMS to parents when announcements are posted
+const triggerNoticeSmsBroadcast = async (title, content) => {
+  try {
+    const parents = await dbService.users.find({ role: 'parent' });
+    for (let parent of parents) {
+      const parentName = parent.name || 'Parent';
+      const parentPhone = parent.phone || '+92 300 1234567';
+      const message = `School Announcement: [${title}] - ${content}`;
+      
+      await dbService.smsLogs.create({
+        recipient: parentName,
+        phone: parentPhone,
+        message,
+        type: 'notice_broadcast'
+      });
+    }
+    console.log(`[SMS Sentinel] Dispatched notices alert to ${parents.length} parents`);
+  } catch (err) {
+    console.error('Error broadcasting notice SMS alert:', err);
+  }
+};
 
 module.exports = router;

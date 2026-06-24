@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Lock, Mail, ArrowLeft, Loader2, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, ArrowLeft, Loader2, Eye, EyeOff, Sparkles, KeyRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { api } from '../utils/api';
+import { useAuthStore } from '../store/authStore';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const loginFn = useAuthStore((state) => state.login);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [twoFactorRequired, setTwoFactorRequired] = useState(false);
 
   const autofillCredentials = () => {
     setEmail('admin@pms.edu');
@@ -24,8 +27,17 @@ export default function AdminLogin() {
     setErrorMessage('');
 
     try {
-      await api.auth.login(email, password, 'admin');
-      navigate('/admin');
+      if (!twoFactorRequired) {
+        const res = await loginFn(email, password, 'admin');
+        if (res?.twoFactorRequired) {
+          setTwoFactorRequired(true);
+        } else {
+          navigate('/admin');
+        }
+      } else {
+        await loginFn(email, password, 'admin', otp);
+        navigate('/admin');
+      }
     } catch (err) {
       console.error(err);
       setErrorMessage(err.message || 'Incorrect credentials or unauthorized access');
@@ -62,64 +74,93 @@ export default function AdminLogin() {
             <div className="w-12 h-12 rounded-2xl bg-brand-100 dark:bg-brand-950 flex items-center justify-center mx-auto mb-3 shadow-md">
               <ShieldCheck className="w-6 h-6 text-brand-600 dark:text-brand-400" />
             </div>
-            <h1 className="font-outfit font-black text-2xl tracking-tight text-slate-900 dark:text-white block">Admin Portal</h1>
+            <h1 className="font-outfit font-black text-2xl tracking-tight text-slate-900 dark:text-white block">
+              {twoFactorRequired ? '2FA Verification' : 'Admin Portal'}
+            </h1>
             <p className="text-slate-400 text-xs font-semibold">Pakhtunkhwa Model School Zangali Branch</p>
           </div>
 
-          <div className="mb-6 flex justify-center">
-            <button 
-              type="button"
-              onClick={autofillCredentials}
-              className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200/80 dark:bg-slateCustom-950 dark:hover:bg-slateCustom-800 border border-slate-200 dark:border-slateCustom-800 rounded-2xl flex items-center gap-2 transition-all group"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-brand-500 animate-pulse" />
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-white">
-                Demo Auto-Fill Credentials
-              </span>
-            </button>
-          </div>
+          {!twoFactorRequired && (
+            <div className="mb-6 flex justify-center">
+              <button 
+                type="button"
+                onClick={autofillCredentials}
+                className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200/80 dark:bg-slateCustom-950 dark:hover:bg-slateCustom-800 border border-slate-200 dark:border-slateCustom-800 rounded-2xl flex items-center gap-2 transition-all group"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-brand-500 animate-pulse" />
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-white">
+                  Demo Auto-Fill Credentials
+                </span>
+              </button>
+            </div>
+          )}
 
           <form onSubmit={handleLoginSubmit} className="space-y-5">
-            <div className="space-y-2 text-left">
-              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">Email Address</label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                  <Mail className="w-4 h-4" />
-                </span>
-                <input 
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@pms.edu"
-                  className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200 dark:border-slateCustom-800 bg-slate-50 dark:bg-slateCustom-950 text-slate-800 dark:text-white text-sm outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all"
-                />
-              </div>
-            </div>
+            {!twoFactorRequired ? (
+              <>
+                <div className="space-y-2 text-left">
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">Email Address</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                      <Mail className="w-4 h-4" />
+                    </span>
+                    <input 
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="admin@pms.edu"
+                      className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200 dark:border-slateCustom-800 bg-slate-50 dark:bg-slateCustom-950 text-slate-800 dark:text-white text-sm outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all"
+                    />
+                  </div>
+                </div>
 
-            <div className="space-y-2 text-left">
-              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">Password</label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                  <Lock className="w-4 h-4" />
-                </span>
-                <input 
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full h-12 pl-11 pr-12 rounded-xl border border-slate-200 dark:border-slateCustom-800 bg-slate-50 dark:bg-slateCustom-950 text-slate-800 dark:text-white text-sm outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all"
-                />
-                <button 
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-white"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4.5 h-4.5" />}
-                </button>
+                <div className="space-y-2 text-left">
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">Password</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                      <Lock className="w-4 h-4" />
+                    </span>
+                    <input 
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full h-12 pl-11 pr-12 rounded-xl border border-slate-200 dark:border-slateCustom-800 bg-slate-50 dark:bg-slateCustom-950 text-slate-800 dark:text-white text-sm outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all"
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4.5 h-4.5" />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2 text-left">
+                <div className="p-4 bg-teal-50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-900/60 rounded-2xl text-teal-700 dark:text-teal-400 text-xs font-semibold mb-4">
+                  🔑 A 6-digit verification code has been simulated and sent to the administrator outbox logs. Enter it below to complete sign-in.
+                </div>
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">2FA One-Time Code</label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                    <KeyRound className="w-4 h-4" />
+                  </span>
+                  <input 
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    placeholder="Enter 6-digit OTP"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200 dark:border-slateCustom-800 bg-slate-50 dark:bg-slateCustom-950 text-slate-800 dark:text-white text-sm outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all tracking-[0.25em] font-mono text-center font-bold"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <AnimatePresence>
               {errorMessage && (
@@ -142,23 +183,13 @@ export default function AdminLogin() {
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Verifying Admin Credentials...
+                  {twoFactorRequired ? 'Confirming Code...' : 'Verifying Admin Credentials...'}
                 </>
               ) : (
-                'Enter Admin Dashboard'
+                twoFactorRequired ? 'Confirm Code & Enter' : 'Enter Admin Dashboard'
               )}
             </button>
           </form>
-
-          <div className="mt-6 text-center text-xs text-slate-400">
-            <span>New administrator? </span>
-            <button 
-              onClick={() => navigate('/admin-signup')}
-              className="font-bold text-brand-600 hover:text-brand-500 transition-colors"
-            >
-              Register here
-            </button>
-          </div>
         </motion.div>
       </main>
 
